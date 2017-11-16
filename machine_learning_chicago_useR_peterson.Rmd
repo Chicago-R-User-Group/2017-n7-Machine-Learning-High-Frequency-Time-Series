@@ -1,0 +1,799 @@
+---
+title: "Machine Learning for Trading with an Extended Case Study in **R** and Stan"
+author: "Brian G. Peterson"
+date: "updated `r format(Sys.time(), '%d %B %Y')`"
+output:
+  ioslides_presentation:
+    widescreen: yes
+bibliography: ../strategy_types/quant_strategy_papers.bib
+footer: Copyright 2017 Brian G. Peterson CC-BY.
+# logo: ../other_talks/DVlogo_only.jpg
+keywords: quantitative trading, backtest, quantitative strategy, machine learning, statistical learning, artificial intelligence
+rights: ©2017 Brian G. Peterson CC-BY. 
+subject: quantitative trading, backtest, machine learning
+abstract: Statistical or Machine Learning 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Introductions
+
+## *Who is this Guy ?* { .smaller .columns-2 }
+
+__Brian Peterson:__
+
+- quant, author, open source advocate
+- [DV Trading](http://dvtrading.co) Partner | Head Trader | Automated Trading Strategies
+- Senior Lecturer (Part-Time), University of Washington [Computational Finance and Risk Management](http://depts.washington.edu/compfin/)
+- author or co-author of over 10 packages for using R in Finance
+- organization admin for [**R**](https://github.com/rstats-gsoc/)'s participation in [Google Summer of Code](https://summerofcode.withgoogle.com/)
+
+__Proprietary Trading:__
+
+- proprietary or principal traders are a specific "member" structure with the exchanges
+- high barriers to entry, large up-front capital requirements
+- many strategies pursued in this structure have capacity constraints
+- benefits on the other side are low fees, potentially high leverage
+- money management needs to be very focused on drawdowns, leverage, volatility
+
+## So what is Machine Learning?
+
+- after Artificial Intelligence models failed to produce human-like intelligence
+
+- Machine Learning was adopted as the term to include a huge range of (mostly) non-parametric computational inference models
+
+- the goal is to provide inference from data
+
+- lives at the intersection of computer science and statistics
+
+see:
+
+- Domingos [-@Domingos2015] *The Master Algorithm*
+
+- Efron & Hastie [-@Efron2016] *Computer Age Statistical Inference*
+
+for book-length treatments.
+
+
+# Data and Features
+
+## So it's all about the data? {.columns-2}
+
+- market data capture going from ~100GB/day to ~1+TB/day as more information sent by exchanges
+
+- many vendors, including huge players like Reuters and IBM, are providing additional parsed data sources
+
+- top users of ML in trading are collecting, curating, and cultivating rare or private data sources
+
+- now common to have tens to hundreds of additional descriptive time series in addition to market data
+
+![](../other_talks/machine_learning.png)
+https://xkcd.com/1838/ ^[alt-text: "The pile gets soaked with data and starts to get mushy over time, so it's technically recurrent."]
+
+
+## What about the Features?
+
+- how do we go from descriptive to predictive?
+
+- the raw data is usually not the main feature in time series prediction
+
+- feature selection [@Guyon2003] ranks and filters multiple possible features
+
+- it is often better to first engage in pro-active feature engineering:
+
+    - transformation of data to regularize scale, variation
+    - coding of data into categorical or integer states
+    - adding features that are indicative of the objective
+    - using extra models for things like seasonality or colinearity
+    
+
+# About the Models
+
+## Rules Engines
+
+- rules created by experts have largely fallen out of favor  (*or have they?*)
+
+- knowledge engineering and expert systems enjoyed a brief ascendancy in the 1980's 
+
+- notably before computers were fast enough to employ statistical approaches
+
+- many of the most successful users of ML spend significant time and money crafting features from data
+
+- perhaps knowledge encoded as features is the most important legacy of the expert systems
+
+- Decision Tree R Packages:  [rpart](http://cran.r-project.org/web/packages/rpart/index.html) [party](http://cran.r-project.org/web/packages/party/index.html) [randomForest](http://cran.r-project.org/web/packages/randomForest/index.html) 
+
+## Optimization {.smaller}
+
+- almost all machine learning has its roots in optimization
+
+- many algorithms use optimization solvers or parts of optimization solvers
+
+- optimization is also valuable in this context because it is one of the most common ML use cases
+
+- for overviews of (primarily) convex optimization see the Simon's Institute talks by Ben Recht [ -@Recht2013i,  [-@Recht2013ii] ]
+
+- global stochastic models can handle non-smooth objectives, e.g.
+
+    - Particle Swarms [@Kennedy2011], e.g. [pso](http://cran.r-project.org/web/packages/pso) 
+    - Simulated Annealing [@Kirkpatrick1983], e.g. [genSA](http://cran.r-project.org/web/packages/genSA)
+    - Genetic Algos like Differential Evolution [@Price2006, @Zhang2009], e.g. [DEoptim](http://cran.r-project.org/web/packages/DEoptim)
+    
+... and *learn* or adapt as they gather more data
+
+## Gradient Descent
+
+- gradient descent is the preference to move towards a local minima 
+
+- used widely in solving optimization problems
+
+- the famous Perceptron [@Rosenblatt1958] is a gradient descent algorithm (and also the original neural network)
+
+- information on Momentum for gradient descent in @Goh2017
+
+- [policy gradients](http://www.scholarpedia.org/article/Policy_gradient_methods) are formed
+  when you add parameters to gradient descent, and update optimal parameters as more data is examined
+  
+- policy gradients are the key mechanism utilized to construct reinforcement learning agent based models
+
+- see packages [ReinforcementLearning](https://cran.r-project.org/web/packages/ReinforcementLearning/), [MDPtoolbox](https://cran.r-project.org/web/packages/MDPtoolbox), and [gym](https://cran.r-project.org/web/packages/gym)
+
+## Back Propagation
+
+- backpropagation is the adjustment of previously established views or connections based on how new data differs from expectations
+
+- related to policy gradients and gradient descent, 
+
+- the most famous models employing backpropagation are neural networks
+
+- 'deep learning' is a neural network with more layers, requiring bigger computers and more data
+
+- one of the oldest true 'learning' approaches as the model adapts itself [@Chauvin1995, @Horikawa1992]
+
+- host of different neural network flavors, implemented in [neuralnet](https://cran.r-project.org/web/packages/neuralnet), [keras](https://rstudio.github.io/keras/), [tensorflow](https://tensorflow.rstudio.com/)
+
+## Evolution (Crossover & Mutation)
+
+- all stochastic optimizers are to some degree population based
+
+- evolutionary algorithms adopt this language from biology
+
+- features critical to 'learning' optimizers are crossover and mutation
+
+- crossover is the mixing of features from more successful trials [@Spears1992, @Spears1993]
+
+- mutation randomizes features (even if successful) to avoid local minima
+
+- look at global solvers such as [DEoptim](http://cran.r-project.org/web/packages/DEoptim) or [pso](http://cran.r-project.org/web/packages/pso)
+
+## Similarity
+
+- similarity between training set and sample used to draw inferences
+
+- applicable to both Euclidian and non-Euclidian feature spaces
+
+- after pairwise similarity methodology is set, no need for access to the features themselves
+
+- applied to regression, classification, and ranking [@Chen2009]
+
+- [k-means clusters](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html), [SVM](https://cran.r-project.org/web/packages/e1071/) models, [kernel](https://cran.r-project.org/web/packages/KernSmooth/) models all used to build similarity models
+
+## Probabalistic Inference
+
+- relationships between variables may often be known only with a certain probability
+
+- state transitions also occur with a certain observable probability even if the underlying causes are unknown
+
+- inference from these probabilities is the core of Monte Carlo, Bayesian methods [@Cooper1990, @Neal1993]
+
+- inherently computationally intensive in ways that some earlier learning approaches were not
+
+- see [Stan](http://mc-stan.org) (and [rstan](https://cran.r-project.org/web/packages/rstan/))
+
+
+## Compute Implications
+
+- choose a technology stack to build on 
+
+    - R, python
+    - libraries such as TensorFlow, AzureML, mlr, scikit-learn
+    - the heavy lifting is done with compiled code
+    - cluster architecture (OpenStack, AWS, Azure, Google Compute) 
+    - use specialized hardware where appropriate (e.g. GPU, TPU, ASIC)
+    
+- normalize all data access and metadata
+
+    - specialized time series databases (e.g. InfluxDB, Timebase, OneTick, kdb, Streambase)
+    - catalog all the data, version it
+
+- build a process for continuously evaluating models [@Breck2016]
+
+# Getting It Wrong
+
+## Evaluating Overfitting in Machine Learning {.smaller}
+
+Classical measures:
+
+- specialized *t*-tests for ML algorithms
+- cross-validation (but this makes the *t*-test challenging)
+- *p*-value (but subject to *p*-hacking [@Head2015])
+- multiple-hypothesis testing (beware of false discovery rate [@Efron2016, Ch. 15])
+- mean squared forecast error (MSFE, RMSE)
+- resampled errors (bootstrap, permutation tests, etc.)
+
+ML-specific measures [@Japkowicz2011]:
+
+- Confusion Matrix 
+- Receiver Operating Characteristic (ROC) plots/stats or the related Cost Curves
+
+<div class="centered">
+*Make sure that you can inspect the choices your model is making!*
+</div>
+
+## Detecting Overfitting in Backtests {.smaller}
+
+Multiple tests focused on overfitting of backtests also exist:
+
+- **Walk Forward Analysis** : @Pardo2008 in [quantstrat](https://github.com/braverock/quantstrat)
+- **Equity Curve Monte Carlo** : @Tomasini2009 in [blotter](https://github.com/braverock/blotter)
+- **Round Turn Trade Monte Carlo** : @Peterson2015 in [quantstrat](https://github.com/braverock/quantstrat)
+- **White's Reality Check** : from @White2000 and @Hansen2005 in [ttrTests](https://www.r-bloggers.com/tag/ttrtests)
+- **k-fold cross validation** : randomly divide the sample of size $T$ into sequential 
+  sub-samples of size $T/k$. [@Hastie2009]
+- **CSCV sampling** (combinatorially symmetric cross validation): "generate $S/2$ testing sets of size $T/2$ by recombining the $S$ slices of the overall sample of size $T$ ". [@Bailey2014probability, p.17] in [pbo](https://cran.r-project.org/web/packages/pbo)
+- **Multiple Hypothesis Testing** looks at Type I vs Type II error in evaluating 
+  backtests and at appropriate haircuts based on these probabilities. [@Harvey2013backtesting ] in [quantstrat](https://github.com/braverock/quantstrat)
+
+
+
+# Using Machine Learning in Trading
+
+*A big computer, a complex algorithm and a long time does not equal science*. - Robert Gentleman
+
+## Regression
+
+- regression results may be the most common uses of machine learning 
+
+- you want the algorithm to estimate the value (mean/median), slope, etc. of some variable
+
+- you may do this directly (e.g. [logistic regression](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/glm.html), Bayesian regression via [Stan](https://cran.r-project.org/web/packages/rstan/), [Random Forest](https://cran.r-project.org/web/packages/randomForest), [Boost](
+https://cran.r-project.org/web/packages/mboost))
+
+- or indirectly (MCMC, gradient descent, [state space model](https://cran.r-project.org/web/packages/forecast/), optimization model with the correct objective)
+
+- in many cases, simpler regression models (e.g. [dlm](https://cran.r-project.org/web/packages/dlm), [ridge regression](https://cran.r-project.org/web/packages/penalized), [LASSO](https://cran.r-project.org/web/packages/lars)) may do just as well
+
+## Optimization
+
+- not just a model feature, optimization is often the end goal
+
+- consider whether simpler linear/quadratic/gradient optimizers will work -- less model risk
+
+- optimizer parameters for global optimizers can have huge impacts on model outputs and computation
+
+- many problems may be recast as optimization problems:
+
+    - capital allocation, see [PortfolioAnalytics](https://cran.r-project.org/web/packages/PortfolioAnalytics)
+    - risk management, see PortfolioAnalytics and [PerformanceAnalytics](https://cran.r-project.org/web/packages/PerformanceAnalytics)
+    - adaptive parameters
+    - (optimal) process control, see [gym](https://cran.r-project.org/web/packages/gym) and [MDPtoolbox](https://cran.r-project.org/web/packages/MDPtoolbox)
+    
+## Classification / Clustering
+
+- separation of observations into groups or states is classification or clustering [@Japkowicz2011]
+
+- many ML models are used as classifiers
+
+- proceeding from simple models is usually advisable
+
+- key goal is typically to *label* the observed data or state
+
+- so that some other model can take action based on that label/state
+
+- common classification uses:
+
+    - volatility regimes, e.g. [Markov Switching GARCH](https://github.com/keblu/MSGARCH)
+    - country/sector/volatility clustering
+    - bull/bear market classification
+    - trending/consolidating market
+    
+## Composite Models
+
+- lots of little models
+
+- ensembles, boosting, weak learners
+
+- in trading, this means mostly feature engineering
+
+- or combining weak alpha trading models
+
+- Worldquant [@Tulchinsky2015], Kepos (Carhart/Litterman), Jump, Renaissance, Bridgewater, Citadel, others all doing this to one degree or another
+
+&nbsp;
+
+<div class="centered">
+*Doing this well takes scale!*
+</div>
+
+## Model Discovery
+
+- use the ML model to *discover* trading strategies
+- given market data, build trading rules
+
+&nbsp;
+
+- the 'Holy Grail' of ML in trading
+
+&nbsp;
+
+
+<div class="centered">
+*Like the Grail, mostly a myth*
+</div>
+
+&nbsp;
+
+## Machine Learning in Trading {.smaller}
+
+- "targeted" machine learning is all around us (e.g. voice recognition, face recognition)
+- some of the most spectacular advances for large scale ML have been games (Jeopardy, Chess, Go, DOTA2) 
+- those wins had huge custom built computers behind them, doing *online* ML
+
+&nbsp;
+
+- most uses of ML in Trading are *offline*, 
+
+    - models trained on large data, clusters, GPU's, TPU's
+    - model parameters then fixed for 24 hours or more
+    
+- or use a simplified *online* model that updates state but does not refit model parameters
+
+
+
+- feature engineering is what makes models work
+
+- many good features and data sets make model 'discovery' possible
+
+- focus on curating your data, building features
+
+- with enough data, models, and features, you have broad choice of algorithms
+
+
+<style>
+
+h3 {
+  font-size: 14px !important;
+}
+
+.figslide, .smallmathslide {
+  margin-top: 0px;
+}
+
+.figslide img {
+  width: 90%;
+}
+
+.largefig img {
+  width: 90%;
+}
+
+.mediumfig img {
+  width: 70%;
+}
+
+article.figslide p, article.figslide ul {
+  font-size: 14px !important;
+}
+
+article.smallmathslide .MathJax_Display {
+  font-size: 12px !important;
+  text-align: left !important;
+  border-left: 3px solid red !important;
+  padding-left: 10px !important;
+}
+
+article.smalltableslide th, article.smalltableslide td {
+  font-size: 10px !important;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+article.smalltableslide th {
+  border-bottom: 1px solid #797979;
+}
+
+blockquote {
+  background: #f9f9f9;
+  border-left: 10px solid #ccc;
+  margin: 1.5em 10px;
+  padding: 0.5em 10px;
+  quotes: "\201C""\201D""\2018""\2019";
+}
+
+blockquote:before {
+  color: #ccc;
+  content: open-quote;
+  font-size: 4em;
+  line-height: 0.1em;
+  margin-right: 0.25em;
+  vertical-align: -0.4em;
+}
+
+blockquote p {
+  display: inline;
+}
+
+<!-- blockquote style from
+     https://css-tricks.com/snippets/css/simple-and-nice-blockquote-styling/ -->
+     
+</style>
+
+# Case Study
+
+## Digression: Google Summer of Code {.smaller}
+
+- [Google Summer of Code](https://summerofcode.withgoogle.com/) is an annual program
+
+- students write open source code for the summer with the assistance of project mentors 
+
+- students compete for slots each summer that take the place of an industry internship
+
+- students get paid a [stipend](https://developers.google.com/open-source/gsoc/help/student-stipends) by Google
+
+- [**R**](https://github.com/rstats-gsoc/) has participated for 12 of the 13 years the program has existed
+
+- several student projects in **R** GSoC each year are Finance and/or Machine Learning related:
+
+    - [Rcpp](https://github.com/RcppCore/Rcpp)
+    - financial graphics
+    - evaluating estimation errors for performance and risk
+    - porting matlab code from Dowd, Meucci, others
+    - [research replication](https://www.researchgate.net/publication/319298241_Research_Replication)
+    - extending machine learning libraries like [mlr](https://github.com/mlr-org/mlr), [Keras](https://github.com/rstudio/keras), Stan, Tensorflow, and others
+
+
+## High Frequency Data
+
+- large
+- noisy
+- non-stationary
+
+&nbsp;
+
+- 10's to 100's of GB of data per day per market
+- millions to billions of observations per instrument
+- time-alignment issues across markets and data sources
+
+## Implementation: Rmarkdown
+
+- we extensively use *rmarkdown*[@Rmarkdown] for repeatable, compileable documents
+- write documentation and code together in one document
+- and research and production reports
+- we find it easier to use than the older [Sweave](https://support.rstudio.com/hc/en-us/articles/200552056-Using-Sweave-and-knitr)
+- well supported for development and testing via RStudio
+- I use it extensively for presentations (like this one! code available upon request)
+
+
+## Implementation: Time Series Data {.smaller}
+
+- we use *xts*[@xts2017] for time series data in **R**
+- *plot.xts* written by Ross Bennett, is massively faster than *ggplot2*[@ggplot2_2016]
+
+&nbsp;
+
+Critical features for dealing with time series:
+
+- easy merging of data by time/date index
+- easy subsetting using [ISO-8601](https://xkcd.com/1179/)
+- can handle billions of rows, unlike the *tidyverse*[@tidyverse]
+
+&nbsp;
+
+- the Tayal replication is a *small* study, and used 101 M rows of data, ~10GB uncompressed
+- training windows on individual instruments contained several million rows
+- feature processing reduced dimensionality to ~10k features per day per symbol
+
+## Digression: History of Monte Carlo analysis
+
+- Laplace was the first to describe the mathematical properties of sampling from a distribution
+- Mahalanobis extended this work in the 1930's to describe sampling from dependent distributions, and anticipated the block bootstrap by examining these dependencies
+- Monte Carlo simulation was developed by Stan Ulam and John von Neumann (with computation by Françoise Ulam) as part of the hydrogen bomb program in 1946 (Richard Rhodes, **Dark Sun**, p.304)
+- computational implementation of Monte Carlo simulation was constructed by Nicholas Metropolis on the ENIAC and MANIAC machines 
+- Metropolis was an author in 1953 of the prior distribution sampler extended by W.K Hastings to the modern Metropolis-Hastings form in 1970
+- Maurice Quenouille and John Tukey developed 'jackknife' simulation in the 1950's
+- Bradley Efron described the modern bootstrap in 1979
+
+## Hidden Markov Models
+
+- many processes are only partially observable
+- inputs are known, but may be incomplete
+- outputs are observable, but may be probabilistic and/or noisy
+
+&nbsp;
+
+- Hidden Markov Models combine a discrete state model with an output or observation model
+- transitions between states are governed by a 'chained' Markov state
+- probability of being in one state or another can be computed at each observation
+
+
+## Implementation: Stan 
+
+- [Stan](http://mc-stan.org/) is a domain specific language (DSL) for doing Bayesian inference
+- named for Stan Ulam
+
+&nbsp;
+
+- given an unknown quantity $\phi$ sample from a probability distribution with a state transition matrix
+- in theory (potentially given infinite time and a sufficiently good guess), the sample distribution will converge on the unknown distribution
+- the primary sampling method used in Stan is called *Hamiltonian* Monte Carlo 
+- the Hamiltonian sampler[@Neal2011] will typically perform better than the older, simpler Gibbs sampler or the Metropolis-Hastings sampler for high-dimensional problems or problems with multiple parameters
+
+## Implementation: Stan Models
+
+- all Stan models consist of a specification of the *data*, a set of *parameters*, and a *model* which describes the sampling and transition matrix
+
+```{stan, output.var="stan", eval=FALSE, echo=TRUE}
+
+data {
+  int<lower=1> T;                   // number of observations (length)
+  int<lower=1> K;                   // number of hidden states
+  real x_t[T];                      // observations
+}
+
+parameters {
+  // Discrete state model
+  simplex[K] p_1k;                  // initial state probabilities
+  simplex[K] A_ij[K];               // transition probabilities
+                                    // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
+
+  // Continuous observation model
+  ordered[K] mu_k;                  // observation means
+  real<lower=0> sigma_k[K];         // observation standard deviations
+}
+
+```
+
+## Implementation: HMM {.smaller}
+
+- the model draws from a generative path using the transition probabilities
+
+```{r eval=FALSE, echo=TRUE }
+runif_simplex <- function(T) {
+  x <- -log(runif(T))
+  x / sum(x)
+}
+
+hmm_generate <- function(K, T) {
+  # 1. Parameters
+  p_1k <- runif_simplex(K)
+  A_ij <- t(replicate(K, runif_simplex(K)))
+  mu_k <- sort(rnorm(K, 10 * 1:K, 1))
+  sigma_k <- abs(rnorm(K))
+
+  # 2. Hidden path
+  z_t <- vector("numeric", T)
+
+  z_t[1] <- sample(1:K, size = 1, prob = p_1k)
+  for (t in 2:T)
+    z_t[t] <- sample(1:K, size = 1, prob = A_ij[z_t[t - 1], ])
+
+  # 3. Observations
+  x_t <- vector("numeric", T)
+  for (t in 1:T)
+    x_t[t] <- rnorm(1, mu_k[z_t[t]], sigma_k[z_t[t]])
+
+  list(x_t = x_t, z_t = z_t,
+       theta = list(p_1k = p_1k, A_ij = A_ij,
+                    mu_k = mu_k, sigma_k = sigma_k))
+}
+```
+
+- note that this model draws from a Gaussian prior, and is controlling the transition matrix to get differentiation
+
+- see https://github.com/luisdamiano/stancon18/ for a full tutorial on HMM in Stan
+
+## How to make useful predictions from features? { .smaller }
+
+<div class="centered">
+*[...] some machine learning projects succeed and some fail. What makes the difference? Easily the most important factor is the features used.* [@Domingos2012]
+</div>
+
+A plain __HMM__ is a probabilistic learner of the unobserved dynamics behind a sequence of discrete features. The Tayal __HHMM__ maps the features and the corresponding learned states into bull and bear markets by establishing a hierarchy.
+
+__The strengths of the features__:
+
+- __Underlying theory__: representative of beliefs about how markets work (interactions between price and volume)
+- __Statistical properties__: captures non-linearities in a simple, parsimonious, and tractable way
+- __Noise reduction__: by discretization
+- __Computational complexity__: improved by reducing data set size
+- __Empirical support__: when applied on real data, results are consistent with empirical evidence
+
+We test the model out of sample. After one feature (a "zig-zag") ends, we predict the next state. We buy one unit in bull states and sell one unit in bear states.
+
+## Hierarchical Hidden Markov Model | __Bayesian Hierarchical Hidden Markov Models applied to financial time series__ [@Damiano2017] <br /> based on __Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets__ [@Tayal2009] { .smaller .columns-2 }
+
+__Problem__: predicting price trends systematically in a profitable way
+
+__Stylized Facts__:
+
+- Market behavior is complex and partially unknown
+- Non-linear interactions between price and volume
+- Multi-resolution: short-term trends within long-term trends
+- High-frequency: noisy and large data sets need fast online computations
+
+__A Proposal__: ensemble of statistical and machine learning techniques
+
+1. Create intermediate indicator variables
+2. Combine them into discrete features using technical analysis rules
+3. Build a hierarchy to link all the features in a logical way
+4. Apply clustering with Markovian memory
+
+## Case Study Feature Detail { .smaller .columns-2 .smallmathslide .smalltableslide }
+
+__(1)__ Identify local extrema, where $e_n$ is the price at the extreme.
+
+__(2)__ Create intermediate variables $\nu, \ \tilde{\nu}$ and features $f_n^0$ direction, $f_n^1$ price trend, $f_n^2$ volume trend.
+
+\[
+f_n^0 =
+\begin{cases}
++1 & \text{if $e_n$ is a local maximum (positive zig-zag)} \\
+-1 & \text{if $e_n$ is a local minimum (negative zig-zag),} \\
+\end{cases}
+\]
+
+\[
+f_n^1 =
+\begin{cases}
++1 & \text{if $e_{n-4} < e_{n-2} < e_{n} \wedge e_{n-3} < e_{n-1}$ (up-trend)} \\
+-1 & \text{if $e_{n-4} > e_{n-2} > e_{n} \wedge e_{n-3} > e_{n-1}$ (down-trend)} \\
+ 0 & \text{otherwise (no trend).}
+\end{cases}
+\]
+
+\[
+\nu_n^1 = \frac{\phi_n}{\phi_{n-1}}, \quad \nu_n^2 = \frac{\phi_n}{\phi_{n-2}}, \quad \nu_n^3 = \frac{\phi_{n-1}}{\phi_{n-2}}, \quad
+\tilde{\nu}_n^j =
+\begin{cases}
++1 & \text{if $\nu_n^j - 1 > \alpha$} \\
+-1 & \text{if $1 - \nu_n^j > \alpha$} \\
+ 0 & \text{if $|\nu_n^j - 1| \le \alpha$}, \\
+\end{cases}
+\]
+
+\[
+f_n^2 =
+\begin{cases}
++1 & \text{if $\tilde{\nu}_n^1 = 1, \tilde{\nu}_n^2 > -1, \tilde{\nu}_n^3 < 1$ (volume strengthens)} \\
+-1 & \text{if $\tilde{\nu}_n^1 = -1, \tilde{\nu}_n^2 < -1, \tilde{\nu}_n^3 > -1$ (volume weakens)} \\
+ 0 & \text{otherwise (volume is indeterminant)}. \\
+\end{cases}
+\]
+
+__(3)__ Combine into 18 meaningful features using the following table. They will be linked hierarchically by the model.
+
+&nbsp;
+
+&nbsp;
+
+```{r, include = TRUE, results="asis"}
+library(xtable)
+df.col <- c("Zig-zag", "Price trend", "Volume trend", "Market State")
+df.row <- expand.grid(1:9, c("U", "D"))
+
+df.lab <- list(
+    list("up" = "Up +1", "dn" = "Dn -1"),
+    list("up" = "Up +1", "nt" = "No  0", "dn" = "Dn -1"),
+    list("st" = "Strong +1", "in" = "Indet  0", "wk" = "Weak -1"),
+    list("bu" = "Bull", "lv" = "Local", "be" = "Bear")
+  )
+
+df <- data.frame(
+    direction = rep(c('up', 'dn'), each = 9),
+    trend = rep(c('up', 'dn', 'up', 'nt', 'nt', 'nt', 'dn', 'up', 'dn'), 2),
+    cgvol = c('st', 'st', 'in', 'st', 'in', 'wk', 'in', 'wk', 'wk', 'wk', 'wk', 'in', 'wk', 'in', 'st', 'in', 'st', 'st'),
+    state = rep(c(rep('bu', 4), 'lv', rep('be', 4)), 2),
+    stringsAsFactors = FALSE
+)
+
+colnames(df) <- df.col
+rownames(df) <- sprintf("$%s_{%s}$", df.row[, 2], df.row[, 1])
+
+for (i in 1:length(df.lab)) {
+  for (j in 1:length(df.lab[[i]])) {
+    df[, i] <- gsub(paste0("\\<", names(df.lab[[i]])[j], "\\>"), df.lab[[i]][[j]], df[, i])
+  }
+}
+
+options(xtable.type = 'html',
+        xtable.sanitize.text.function = identity,
+        xtable.sanitize.rownames.function = identity,
+        xtable.sanitize.colnames.function = identity,
+        xtable.sanitize.subheadings.function = identity,
+        xtable.sanitize.message.function = identity,
+        xtable.comment = FALSE)
+
+df.out <- cbind(rownames(df)[1:9], df[1:9, ], rownames(df)[10:18], df[10:18, ])
+colnames(df.out) <- rep(c('Feature', df.col), 2)
+
+tabs <- xtable(df.out,
+               align = c('center', rep('center', ncol(df.out))))
+
+print(tabs, include.rownames = FALSE)
+
+```
+
+<hr />
+
+```{r, include = FALSE}
+library(xts)
+#source('R/plots.R')
+```
+
+```{r, include = TRUE, warning = FALSE, fig.cap = "Features extracted from TSE:G 2007-05-11 11:00:00/2007-05-11 11:30:00.", dev.args = list(bg = 'transparent'), dpi=300, fig.align = 'center', out.width='100%'}
+fig9 <- readRDS(file.path('data', 'G.TO'))
+ss <- '2007-05-03 11:00:00/2007-05-03 11:30:00'
+
+par(cex = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
+plot_features(fig9$tdata[ss], fig9$zig[ss])
+```
+
+## Results { .figslide .mediumfig .smaller}
+
+Back tested on 12 stocks, 17 days, 7 configurations: $12 \times 17 \times 7 = 1,428$ out of sample daily returns.
+
+- For most stocks, HHMM outperforms buy & hold (B&H).
+- Returns virtually uncorrelated with B&H.
+- Sometimes HHMM offers less variance than B&H (further research needed).
+
+<div class = "figure" style="text-align: center">
+![](img/equity_line.png){ width=100% }
+</div>
+
+
+## Per-Instrument Results { .figslide } 
+
+<div class = "figure" style="text-align: center">
+![](img/equity_lines-lag4.png){ width=100% }
+</div>
+
+## Thanks { .smaller }
+
+<div class="centered">
+*Thank You for Your Attention*
+</div>
+
+&nbsp;
+
+Thanks to Luis Damiano for his work in GSoC2017, my team, and my family, who make it possible.
+
+©2017 Brian G. Peterson brian\@braverock.com
+
+
+![](../other_talks/cc_by_88x31.png)
+This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/)
+
+Code to apply the techniques discussed here may be found in the 
+*mlr*, *TensorFlow*, *rstan*, *blotter*, *quantstrat*, *PerformanceAnalytics*, *PortfolioAnalytics*, and other **R** packages. 
+
+All views expressed in this presentation are those of Brian Peterson, 
+and do not necessarily reflect the opinions or policies of DV Trading.  
+
+All remaining errors or omissions should be attributed to the author. 
+
+
+<style>
+slides > slide { overflow: scroll; }
+slides > slide:not(.nobackground):after {
+  content: '';
+}
+slides > slide:not(.nobackground):before {
+  background: none;
+}
+</style>
+## Resources { .smaller }
+
+
+
