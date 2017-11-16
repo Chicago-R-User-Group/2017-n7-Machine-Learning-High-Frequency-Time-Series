@@ -8,7 +8,5 @@ As the author or co-author of over 10 popular `R` packages in Finance, if you've
 
 Brian will discuss Machine Learning, high-frequency time series, relevant R packages, and the crucial question of how to evaluate model over-fit in this context. In addition to a concrete presentation of the entire ML pipeline, he will transition into a Case Study on high-frequency trading, making features useful, and back test evaluation. 
 
-The Case study will be directly related to a paper he co-authored: **Bayesian Hierarchical Hidden Markov Models applied to financial time series** (Damiano, Peterson, and Weylandt 2017). 
-
-[Please see Mr. Damiano's repo of the work here](https://github.com/JustinMShea/gsoc17-hhmm)
+The Case study will be directly related to a paper he co-authored: [**Bayesian Hierarchical Hidden Markov Models applied to financial time series** (Damiano, Peterson, and Weylandt 2017). Click here for Mr. Damiano's github repo.](https://github.com/luisdamiano/gsoc17-hhmm)
 
